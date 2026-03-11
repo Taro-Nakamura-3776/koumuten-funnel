@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工務店集客ファネル分析ツール - 改良版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 1400px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+        
+        .company-input-section {
+            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(116,75,162,0.1));
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .company-input-section input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .input-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .input-section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-group {
+            margin-bottom: 18px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        .input-group input.optional {
+            background-color: #f8f9fa;
+        }
+        
+        .input-group input.auto-calc {
+            background-color: #e8f5e9;
+            border-color: #4caf50;
+            font-weight: 600;
+        }
+        
+        .input-group small {
+            display: block;
+            color: #666;
+            margin-top: 4px;
+            font-size: 0.75em;
+        }
+        
+        .required-badge {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            font-size: 0.65em;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+        
+        .optional-badge {
+            display: inline-block;
+            background: #4dabf7;
+            color: white;
+            font-size: 0.65em;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+        
+        .auto-badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            font-size: 0.65em;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 20px;
+        }
+        
+        .calculate-btn:hover {
+            transform: scale(1.02);
+        }
+        
+        .visualization-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        /* レーダーチャートセクション */
+        .radar-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .radar-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .radar-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        /* ファネルスタイル */
+        .funnel-container {
+            margin-bottom: 40px;
+        }
+        
+        .funnel-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #333;
+        }
+        
+        .funnel-pyramid {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 40px;
+            padding: 20px;
+        }
+        
+        .funnel-stage {
+            position: relative;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+        
+        .funnel-stage-inner {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-height: 70px;
+            margin: 0 auto;
+            transition: all 0.5s ease;
+        }
+        
+        .stage-content {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(102,126,234,0.1), rgba(102,126,234,0.05));
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        
+        .stage-content:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .stage-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .stage-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+            min-width: 200px;
+        }
+        
+        .stage-bars {
+            flex: 1;
+            position: relative;
+            height: 35px;
+            margin: 0 20px;
+        }
+        
+        .bar {
+            position: absolute;
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-weight: 600;
+            font-size: 0.85em;
+            color: white;
+            transition: all 0.5s ease;
+        }
+        
+        .bar-current {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+        }
+        
+        .bar-ideal {
+            background: rgba(200,200,200,0.3);
+            border: 2px dashed #999;
+            z-index: 1;
+            color: #666;
+        }
+        
+        .stage-metrics {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            min-width: 180px;
+            font-size: 0.8em;
+        }
+        
+        .metric-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 2px 0;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            font-weight: 700;
+        }
+        
+        .metric-current {
+            color: #667eea;
+        }
+        
+        .metric-ideal {
+            color: #51cf66;
+        }
+        
+        .metric-gap {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .gap-negative {
+            background: #ffe0e0;
+            color: #d32f2f;
+        }
+        
+        .gap-positive {
+            background: #e0ffe0;
+            color: #2e7d32;
+        }
+        
+        .conversion-arrow {
+            text-align: center;
+            margin: 8px 0;
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .conversion-arrow span {
+            color: #333;
+            font-weight: 700;
+        }
+        
+        /* 改善提案セクション */
+        .improvement-section {
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .improvement-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .improvement-grid {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .improvement-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .improvement-card.critical {
+            border-left-color: #ff6b6b;
+            background: #fff5f5;
+        }
+        
+        .improvement-card.important {
+            border-left-color: #ffa94d;
+            background: #fff9f0;
+        }
+        
+        .improvement-card.good {
+            border-left-color: #51cf66;
+            background: #f0fff4;
+        }
+        
+        .improvement-category {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .improvement-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-critical { background: #ff6b6b; color: white; }
+        .status-important { background: #ffa94d; color: white; }
+        .status-good { background: #51cf66; color: white; }
+        
+        .improvement-detail {
+            margin-bottom: 12px;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .improvement-action {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .improvement-action-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .improvement-action-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .improvement-action-list li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .improvement-action-list li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        /* ロードマップセクション */
+        .roadmap-section {
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .roadmap-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .roadmap-timeline {
+            display: grid;
+            gap: 25px;
+        }
+        
+        .milestone {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .milestone.month-3 {
+            border-left-color: #74c0fc;
+            background: linear-gradient(135deg, rgba(116,192,252,0.05), rgba(116,192,252,0.02));
+        }
+        
+        .milestone.month-6 {
+            border-left-color: #ffa94d;
+            background: linear-gradient(135deg, rgba(255,169,77,0.05), rgba(255,169,77,0.02));
+        }
+        
+        .milestone.month-12 {
+            border-left-color: #51cf66;
+            background: linear-gradient(135deg, rgba(81,207,102,0.05), rgba(81,207,102,0.02));
+        }
+        
+        .milestone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .milestone-period {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .milestone-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .badge-3 { background: #74c0fc; }
+        .badge-6 { background: #ffa94d; }
+        .badge-12 { background: #51cf66; }
+        
+        .milestone-targets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .target-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .target-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .target-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .target-change {
+            font-size: 0.75em;
+            color: #51cf66;
+            margin-top: 3px;
+        }
+        
+        .target-change.negative {
+            color: #ff6b6b;
+        }
+        
+        .milestone-actions {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .actions-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+        
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        
+        .action-category {
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+        
+        .action-category-title {
+            font-weight: 600;
+            font-size: 0.85em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .action-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .action-list li {
+            font-size: 0.8em;
+            color: #555;
+            padding: 3px 0;
+            padding-left: 12px;
+            position: relative;
+        }
+        
+        .action-list li::before {
+            content: "・";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        /* PDF用レポートスタイル */
+        @media print {
+            body {
+                background: white !important;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .print-only {
+                display: block !important;
+            }
+        }
+        
+        .print-report {
+            display: none;
+            background: white;
+            padding: 20px;
+            font-family: 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif;
+        }
+        
+        @media print {
+            .print-report {
+                display: block !important;
+            }
+            
+            .container {
+                display: none !important;
+            }
+        }
+        
+        .report-page {
+            page-break-after: always;
+            padding: 30px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+        
+        .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .report-company {
+            font-size: 20px;
+            color: #667eea;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        
+        .report-date {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .report-section {
+            margin-bottom: 25px;
+        }
+        
+        .report-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        .report-table th, .report-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+        
+        .report-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .report-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        .report-summary {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .report-list {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .report-list li {
+            margin-bottom: 5px;
+        }
+        
+        .report-chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .report-chart-container canvas {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 工務店集客ファネル分析ツール</h1>
+            <p>データドリブンな集客戦略で確実な受注を実現</p>
+        </div>
+        
+        <div class="main-layout">
+            <div class="input-panel">
+                <h2 style="margin-bottom: 20px; color: #333; font-size: 1.2em;">データ入力</h2>
+                
+                <div class="company-input-section">
+                    <input type="text" id="companyName" placeholder="御社名を入力してください" value="">
+                </div>
+                
+                <div class="input-section">
+                    <div class="section-title">
+                        <span>🎯</span>
+                        <span>基本目標</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>現在の年間受注棟数<span class="required-badge">必須</span></label>
+                        <input type="number" id="currentOrders" value="8" min="0" step="1">
+                        <small>過去12ヶ月の実績</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>目標年間受注棟数<span class="required-badge">必須</span></label>
+                        <input type="number" id="targetOrders" value="24" min="1" step="1">
+                        <small>来年度の目標棟数</small>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <div class="section-title">
+                        <span>📊</span>
+                        <span>認知フェーズ</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>3ヶ月間の検索表示回数<span class="optional-badge">任意</span></label>
+                        <input type="number" id="searchImpressions" class="optional" value="11333" min="0">
+                        <small>Search Consoleの表示回数</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>ブランド名検索の割合（%）<span class="optional-badge">任意</span></label>
+                        <input type="number" id="brandSearchRate" class="optional" value="3.2" min="0" max="100" step="0.1">
+                        <small>社名・ブランド名を含む検索の割合</small>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <div class="section-title">
+                        <span>💻</span>
+                        <span>集客フェーズ</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>現在の月間HPセッション数<span class="required-badge">必須</span></label>
+                        <input type="number" id="currentSessions" value="1240" min="0">
+                        <small>Google Analytics等の月間セッション</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>現在の月間問い合わせ総数<span class="auto-badge">自動</span></label>
+                        <input type="number" id="currentInquiries" class="auto-calc" readonly>
+                        <small>リード内訳の合計から自動計算</small>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <div class="section-title">
+                        <span>🔥</span>
+                        <span>リード質別内訳</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>ホットリード数（来場予約・個別相談）<span class="optional-badge">任意</span></label>
+                        <input type="number" id="hotLeads" class="optional" value="3" min="0" step="1" onchange="updateTotalInquiries()">
+                        <small>最も受注に近い見込み客</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>ウォームリード数（資料請求）<span class="optional-badge">任意</span></label>
+                        <input type="number" id="warmLeads" class="optional" value="6" min="0" step="1" onchange="updateTotalInquiries()">
+                        <small>中期的な見込み客</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>コールドリード数（会員登録・小冊子DL）<span class="optional-badge">任意</span></label>
+                        <input type="number" id="coldLeads" class="optional" value="8" min="0" step="1" onchange="updateTotalInquiries()">
+                        <small>長期的な見込み客</small>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <div class="section-title">
+                        <span>📈</span>
+                        <span>転換率</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>リード育成→ホット転換率（%）<span class="auto-badge">自動</span></label>
+                        <input type="number" id="leadConversionRate" class="auto-calc" readonly>
+                        <small>(ウォーム+コールド)→ホットリードへの転換率を自動計算</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>商談→受注率（%）<span class="optional-badge">任意</span></label>
+                        <input type="number" id="closingRate" class="optional" value="20" min="0" max="100" step="1">
+                        <small>営業による成約率（業界標準20%）</small>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="calculateFunnel()">分析実行</button>
+            </div>
+            
+            <div class="visualization-panel">
+                <!-- レーダーチャートセクション -->
+                <div class="radar-section">
+                    <h3 class="radar-title">📊 KPI達成度レーダーチャート</h3>
+                    <div class="radar-container">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- ファネルセクション -->
+                <div class="funnel-container">
+                    <h2 class="funnel-title">🔻 マーケティングファネル</h2>
+                    <div class="funnel-pyramid" id="funnelDisplay">
+                        <!-- ファネルがここに動的に生成されます -->
+                    </div>
+                </div>
+                
+                <!-- 改善提案セクション -->
+                <div class="improvement-section">
+                    <h2 class="improvement-title">📝 改善提案レポート</h2>
+                    <div class="improvement-grid" id="improvementDisplay">
+                        <!-- 改善提案がここに動的に生成されます -->
+                    </div>
+                </div>
+                
+                <!-- ロードマップセクション -->
+                <div class="roadmap-section">
+                    <h2 class="roadmap-title">📅 段階的改善ロードマップ</h2>
+                    <div class="roadmap-timeline" id="roadmapDisplay">
+                        <!-- ロードマップがここに動的に生成されます -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let radarChartInstance = null;
+        let analysisData = {};
+        
+        // 問い合わせ総数の自動計算
+        function updateTotalInquiries() {
+            const hotLeads = parseFloat(document.getElementById('hotLeads').value) || 0;
+            const warmLeads = parseFloat(document.getElementById('warmLeads').value) || 0;
+            const coldLeads = parseFloat(document.getElementById('coldLeads').value) || 0;
+            const total = hotLeads + warmLeads + coldLeads;
+            document.getElementById('currentInquiries').value = total;
+        }
+        
+        function calculateFunnel() {
+            // 入力値の取得
+            const companyName = document.getElementById('companyName').value || '貴社';
+            const currentOrders = parseFloat(document.getElementById('currentOrders').value) || 0;
+            const targetOrders = parseFloat(document.getElementById('targetOrders').value) || 1;
+            const currentSessions = parseFloat(document.getElementById('currentSessions').value) || 0;
+            
+            // リード質別の内訳
+            const hotLeads = parseFloat(document.getElementById('hotLeads').value) || 0;
+            const warmLeads = parseFloat(document.getElementById('warmLeads').value) || 0;
+            const coldLeads = parseFloat(document.getElementById('coldLeads').value) || 0;
+            const currentInquiries = hotLeads + warmLeads + coldLeads;
+            
+            // オプション入力値
+            const searchImpressions = parseFloat(document.getElementById('searchImpressions').value) || 50000;
+            const brandSearchRate = parseFloat(document.getElementById('brandSearchRate').value) || 3;
+            const closingRate = (parseFloat(document.getElementById('closingRate').value) || 20) / 100;
+            
+            // リード育成→ホット転換率の自動計算
+            // (ウォーム+コールド)がホットリードに転換される想定率
+            const warmColdTotal = warmLeads + coldLeads;
+            let leadConversionRate = 0;
+            if (warmColdTotal > 0 && hotLeads > 0) {
+                leadConversionRate = Math.min(100, (hotLeads / warmColdTotal * 100));
+            } else {
+                leadConversionRate = 0;
+            }
+            document.getElementById('leadConversionRate').value = leadConversionRate.toFixed(1);
+            
+            // 月間目標の計算
+            const monthlyTargetOrders = targetOrders / 12;
+            const monthlyCurrentOrders = currentOrders / 12;
+            
+            // 理想値の逆算
+            const idealMonthlyNegotiations = monthlyTargetOrders / closingRate;
+            const idealHotLeads = Math.ceil(idealMonthlyNegotiations * 0.6 / 0.8);
+            const idealWarmLeads = Math.ceil(idealHotLeads * 2.5);
+            const idealColdLeads = Math.ceil(idealHotLeads * 7);
+            const idealTotalLeads = idealHotLeads + idealWarmLeads + idealColdLeads;
+            
+            const idealCVRate = targetOrders <= 12 ? 0.01 : targetOrders <= 24 ? 0.015 : 0.02;
+            const idealMonthlySessions = Math.ceil(idealTotalLeads / idealCVRate);
+            const idealSearchImpressions = targetOrders <= 12 ? 50000 : targetOrders <= 24 ? 75000 : 100000;
+            const idealMonthlyImpressions = idealSearchImpressions / 3;
+            
+            // 現在値の計算
+            const currentMonthlyImpressions = searchImpressions / 3;
+            const currentCVRate = currentSessions > 0 ? currentInquiries / currentSessions : 0;
+            const currentMonthlyVisits = hotLeads * 0.8 + warmLeads * 0.3 + coldLeads * 0.05;
+            const currentMonthlyNegotiations = currentMonthlyVisits * 0.5; // 来場→商談率50%と仮定
+            
+            // 分析データの保存
+            analysisData = {
+                companyName,
+                currentOrders,
+                targetOrders,
+                currentSessions,
+                currentInquiries,
+                searchImpressions,
+                brandSearchRate,
+                hotLeads,
+                warmLeads,
+                coldLeads,
+                idealHotLeads,
+                idealWarmLeads,
+                idealColdLeads,
+                idealMonthlySessions,
+                idealTotalLeads,
+                currentCVRate,
+                idealCVRate,
+                monthlyCurrentOrders,
+                monthlyTargetOrders,
+                currentMonthlyImpressions,
+                idealMonthlyImpressions,
+                currentMonthlyVisits,
+                currentMonthlyNegotiations,
+                idealMonthlyNegotiations,
+                closingRate,
+                leadConversionRate
+            };
+            
+            // レーダーチャートの描画
+            drawRadarChart({
+                searchImpressions: Math.min(100, (searchImpressions / idealSearchImpressions * 100)),
+                sessions: Math.min(100, (currentSessions / idealMonthlySessions * 100)),
+                inquiries: Math.min(100, (currentInquiries / idealTotalLeads * 100)),
+                hotLeads: Math.min(100, (hotLeads / idealHotLeads * 100)),
+                cvRate: Math.min(100, (currentCVRate / idealCVRate * 100)),
+                orders: Math.min(100, (monthlyCurrentOrders / monthlyTargetOrders * 100))
+            });
+            
+            // ファネルデータの作成と表示
+            const funnelData = [
+                {
+                    name: '① 認知フェーズ',
+                    current: currentMonthlyImpressions,
+                    ideal: idealMonthlyImpressions,
+                    unit: '回/月'
+                },
+                {
+                    name: '② HPセッション',
+                    current: currentSessions,
+                    ideal: idealMonthlySessions,
+                    unit: '件/月',
+                    conversion: currentMonthlyImpressions > 0 ? (currentSessions / currentMonthlyImpressions * 100) : 0
+                },
+                {
+                    name: '③ 問い合わせ',
+                    current: currentInquiries,
+                    ideal: idealTotalLeads,
+                    unit: '件/月',
+                    conversion: currentSessions > 0 ? (currentInquiries / currentSessions * 100) : 0
+                },
+                {
+                    name: '④ 来場',
+                    current: Math.round(currentMonthlyVisits),
+                    ideal: Math.ceil(idealMonthlyNegotiations * 0.8),
+                    unit: '組/月',
+                    conversion: currentInquiries > 0 ? (Math.round(currentMonthlyVisits) / currentInquiries * 100) : 0
+                },
+                {
+                    name: '⑤ 商談',
+                    current: Math.round(currentMonthlyNegotiations),
+                    ideal: Math.ceil(idealMonthlyNegotiations),
+                    unit: '組/月',
+                    conversion: Math.round(currentMonthlyVisits) > 0 ? (Math.round(currentMonthlyNegotiations) / Math.round(currentMonthlyVisits) * 100) : 0
+                },
+                {
+                    name: '⑥ 受注',
+                    current: monthlyCurrentOrders,
+                    ideal: monthlyTargetOrders,
+                    unit: '棟/月',
+                    conversion: Math.round(currentMonthlyNegotiations) > 0 ? (monthlyCurrentOrders / Math.round(currentMonthlyNegotiations) * 100) : 0
+                }
+            ];
+            
+            displayFunnel(funnelData);
+            displayImprovements(funnelData, analysisData);
+            displayRoadmap(analysisData);
+        }
+        
+        function displayRoadmap(data) {
+            // 現状と目標の差を段階的に埋める計画
+            const currentToTarget = {
+                sessions: data.idealMonthlySessions - data.currentSessions,
+                inquiries: data.idealTotalLeads - data.currentInquiries,
+                hotLeads: data.idealHotLeads - data.hotLeads,
+                warmLeads: data.idealWarmLeads - data.warmLeads,
+                coldLeads: data.idealColdLeads - data.coldLeads,
+                orders: data.monthlyTargetOrders - data.monthlyCurrentOrders
+            };
+            
+            // 3ヶ月、6ヶ月、12ヶ月での段階的目標
+            const milestones = [
+                {
+                    period: '3ヶ月後',
+                    class: 'month-3',
+                    badge: 'badge-3',
+                    progress: 0.25, // 目標の25%達成
+                    focus: '基盤構築フェーズ',
+                    targets: {
+                        sessions: Math.round(data.currentSessions + currentToTarget.sessions * 0.25),
+                        hotLeads: Math.round(data.hotLeads + currentToTarget.hotLeads * 0.25),
+                        warmLeads: Math.round(data.warmLeads + currentToTarget.warmLeads * 0.25),
+                        coldLeads: Math.round(data.coldLeads + currentToTarget.coldLeads * 0.25),
+                        inquiries: 0, // 後で計算
+                        cvRate: 0, // 後で計算
+                        orders: (data.monthlyCurrentOrders + currentToTarget.orders * 0.25).toFixed(1)
+                    },
+                    actions: {
+                        'SEO・認知施策': [
+                            'SEO基礎改善（タイトル・メタ最適化）',
+                            '地域キーワードでのコンテンツ作成開始',
+                            'Googleマイビジネス最適化'
+                        ],
+                        'CV率改善': [
+                            'お問い合わせフォームの簡素化',
+                            'CTAボタンの配置見直し',
+                            'スマホ対応の改善'
+                        ],
+                        'リード獲得': [
+                            '資料請求の魅力度向上',
+                            'LINE公式アカウント開設',
+                            '個別相談の価値訴求強化'
+                        ]
+                    }
+                },
+                {
+                    period: '6ヶ月後',
+                    class: 'month-6',
+                    badge: 'badge-6',
+                    progress: 0.5, // 目標の50%達成
+                    focus: '成長加速フェーズ',
+                    targets: {
+                        sessions: Math.round(data.currentSessions + currentToTarget.sessions * 0.5),
+                        hotLeads: Math.round(data.hotLeads + currentToTarget.hotLeads * 0.5),
+                        warmLeads: Math.round(data.warmLeads + currentToTarget.warmLeads * 0.5),
+                        coldLeads: Math.round(data.coldLeads + currentToTarget.coldLeads * 0.5),
+                        inquiries: 0, // 後で計算
+                        cvRate: 0, // 後で計算
+                        orders: (data.monthlyCurrentOrders + currentToTarget.orders * 0.5).toFixed(1)
+                    },
+                    actions: {
+                        'Web広告開始': [
+                            'Google広告でのリスティング開始',
+                            'Facebook/Instagram広告の運用',
+                            'リマーケティング設定'
+                        ],
+                        'コンテンツ強化': [
+                            '施工事例を月2件追加',
+                            'お客様の声ページ充実',
+                            '地域情報コンテンツの定期更新'
+                        ],
+                        'イベント戦略': [
+                            '月1回の完成見学会実施',
+                            'オンライン相談会の定期開催',
+                            '限定キャンペーンの実施'
+                        ]
+                    }
+                },
+                {
+                    period: '12ヶ月後',
+                    class: 'month-12',
+                    badge: 'badge-12',
+                    progress: 1.0, // 目標の100%達成
+                    focus: '目標達成・安定化フェーズ',
+                    targets: {
+                        sessions: data.idealMonthlySessions,
+                        hotLeads: data.idealHotLeads,
+                        warmLeads: data.idealWarmLeads,
+                        coldLeads: data.idealColdLeads,
+                        inquiries: data.idealTotalLeads,
+                        cvRate: data.idealCVRate,
+                        orders: data.monthlyTargetOrders.toFixed(1)
+                    },
+                    actions: {
+                        'ブランディング強化': [
+                            'SNSでの認知度向上施策',
+                            'YouTube動画コンテンツ展開',
+                            'OB顧客の紹介制度確立'
+                        ],
+                        'MA・CRM導入': [
+                            'マーケティングオートメーション導入',
+                            'リード育成の自動化',
+                            'スコアリングによる優先順位付け'
+                        ],
+                        '営業連携強化': [
+                            '商談率70%以上を維持',
+                            '成約率25%への向上',
+                            'カスタマージャーニー最適化'
+                        ]
+                    }
+                }
+            ];
+            
+            // 問い合わせ総数とCV率の計算
+            milestones.forEach(milestone => {
+                if (milestone.progress < 1.0) {
+                    milestone.targets.inquiries = milestone.targets.hotLeads + milestone.targets.warmLeads + milestone.targets.coldLeads;
+                    milestone.targets.cvRate = (milestone.targets.inquiries / milestone.targets.sessions);
+                }
+            });
+            
+            let roadmapHTML = '';
+            
+            milestones.forEach(milestone => {
+                const sessionChange = milestone.targets.sessions - data.currentSessions;
+                const inquiryChange = milestone.targets.inquiries - data.currentInquiries;
+                const hotLeadChange = milestone.targets.hotLeads - data.hotLeads;
+                const orderChange = parseFloat(milestone.targets.orders) - data.monthlyCurrentOrders;
+                
+                roadmapHTML += `
+                    <div class="milestone ${milestone.class}">
+                        <div class="milestone-header">
+                            <div class="milestone-period">${milestone.period}の目標</div>
+                            <div class="milestone-badge ${milestone.badge}">${milestone.focus}</div>
+                        </div>
+                        
+                        <div class="milestone-targets">
+                            <div class="target-item">
+                                <div class="target-label">HPセッション</div>
+                                <div class="target-value">${milestone.targets.sessions.toLocaleString()}</div>
+                                <div class="target-change ${sessionChange >= 0 ? '' : 'negative'}">
+                                    ${sessionChange >= 0 ? '+' : ''}${sessionChange.toLocaleString()}件
+                                </div>
+                            </div>
+                            
+                            <div class="target-item" style="border: 2px solid #667eea;">
+                                <div class="target-label">
+                                    問い合わせ総数<br>
+                                    <span style="font-size: 0.7em; color: #999;">
+                                        (🔥${milestone.targets.hotLeads}+🌡️${milestone.targets.warmLeads}+❄️${milestone.targets.coldLeads})
+                                    </span>
+                                </div>
+                                <div class="target-value">${milestone.targets.inquiries}</div>
+                                <div class="target-change ${inquiryChange >= 0 ? '' : 'negative'}">
+                                    ${inquiryChange >= 0 ? '+' : ''}${inquiryChange}件
+                                </div>
+                            </div>
+                            
+                            <div class="target-item">
+                                <div class="target-label">ホットリード</div>
+                                <div class="target-value">${milestone.targets.hotLeads}</div>
+                                <div class="target-change ${hotLeadChange >= 0 ? '' : 'negative'}">
+                                    ${hotLeadChange >= 0 ? '+' : ''}${hotLeadChange}件
+                                </div>
+                            </div>
+                            
+                            <div class="target-item" style="background: #fff9e6;">
+                                <div class="target-label">
+                                    CV率<br>
+                                    <span style="font-size: 0.7em; color: #999;">
+                                        (問合÷セッション)
+                                    </span>
+                                </div>
+                                <div class="target-value">${(milestone.targets.cvRate * 100).toFixed(2)}%</div>
+                                <div class="target-change">
+                                    目標: ${(data.idealCVRate * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                            
+                            <div class="target-item">
+                                <div class="target-label">月間受注</div>
+                                <div class="target-value">${milestone.targets.orders}棟</div>
+                                <div class="target-change ${orderChange >= 0 ? '' : 'negative'}">
+                                    ${orderChange >= 0 ? '+' : ''}${orderChange.toFixed(1)}棟
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="milestone-actions">
+                            <div class="actions-title">📋 ${milestone.period}までの重点施策</div>
+                            <div class="actions-grid">
+                                ${Object.entries(milestone.actions).map(([category, actions]) => `
+                                    <div class="action-category">
+                                        <div class="action-category-title">${category}</div>
+                                        <ul class="action-list">
+                                            ${actions.map(action => `<li>${action}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('roadmapDisplay').innerHTML = roadmapHTML;
+        }
+        
+        function drawRadarChart(scores) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            if (radarChartInstance) {
+                radarChartInstance.destroy();
+            }
+            
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        '検索表示回数',
+                        'HPセッション',
+                        '問い合わせ数',
+                        'ホットリード',
+                        'CV率',
+                        '受注率'
+                    ],
+                    datasets: [
+                        {
+                            label: '現状',
+                            data: [
+                                scores.searchImpressions,
+                                scores.sessions,
+                                scores.inquiries,
+                                scores.hotLeads,
+                                scores.cvRate,
+                                scores.orders
+                            ],
+                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(102, 126, 234, 1)'
+                        },
+                        {
+                            label: '理想（100%）',
+                            data: [100, 100, 100, 100, 100, 100],
+                            backgroundColor: 'rgba(81, 207, 102, 0.1)',
+                            borderColor: 'rgba(81, 207, 102, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: 'rgba(81, 207, 102, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(81, 207, 102, 1)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + Math.round(context.raw) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function displayFunnel(funnelData) {
+            let funnelHTML = '';
+            const otherStages = funnelData.slice(1);
+            const maxOtherValue = Math.max(...otherStages.map(d => Math.max(d.current, d.ideal)));
+            
+            funnelData.forEach((stage, index) => {
+                let currentWidth, idealWidth;
+                
+                if (index === 0) {
+                    currentWidth = 90;
+                    idealWidth = 90;
+                } else {
+                    const widthFactor = 90 - (index * 12);
+                    currentWidth = (stage.current / maxOtherValue * widthFactor) || 5;
+                    idealWidth = (stage.ideal / maxOtherValue * widthFactor) || 5;
+                }
+                
+                const gap = stage.current - stage.ideal;
+                const gapPercent = stage.ideal > 0 ? ((gap / stage.ideal) * 100).toFixed(0) : 0;
+                
+                const displayCurrent = index === 0 ? 
+                    `${(stage.current/1000).toFixed(1)}K` : 
+                    stage.current.toFixed(1);
+                const displayIdeal = index === 0 ? 
+                    `${(stage.ideal/1000).toFixed(1)}K` : 
+                    stage.ideal.toFixed(1);
+                
+                funnelHTML += `
+                    <div class="funnel-stage" style="width: ${90 - (index * 10)}%; margin: 0 auto;">
+                        <div class="funnel-stage-inner">
+                            <div class="stage-content">
+                                <div class="stage-info">
+                                    <div class="stage-name">${stage.name}</div>
+                                    <div class="stage-bars">
+                                        <div class="bar bar-ideal" style="width: ${idealWidth}%;">
+                                            理想: ${displayIdeal}
+                                        </div>
+                                        <div class="bar bar-current" style="width: ${currentWidth}%;">
+                                            現状: ${displayCurrent}
+                                        </div>
+                                    </div>
+                                    <div class="stage-metrics">
+                                        <div class="metric-row">
+                                            <span class="metric-label">現状:</span>
+                                            <span class="metric-value metric-current">${displayCurrent}${stage.unit}</span>
+                                        </div>
+                                        <div class="metric-row">
+                                            <span class="metric-label">理想:</span>
+                                            <span class="metric-value metric-ideal">${displayIdeal}${stage.unit}</span>
+                                        </div>
+                                        <div class="metric-row">
+                                            <span class="metric-gap ${gap >= 0 ? 'gap-positive' : 'gap-negative'}">
+                                                ${gap >= 0 ? '+' : ''}${Math.abs(gapPercent)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ${stage.conversion !== undefined && index > 0 ? `
+                        <div class="conversion-arrow">
+                            ↓ 転換率: <span>${stage.conversion.toFixed(1)}%</span>
+                        </div>
+                    ` : ''}
+                `;
+            });
+            
+            document.getElementById('funnelDisplay').innerHTML = funnelHTML;
+        }
+        
+        function displayImprovements(funnelData, data) {
+            const improvements = [];
+            
+            // 各項目の評価と改善提案
+            if (data.searchImpressions < 50000) {
+                improvements.push({
+                    category: '認知拡大戦略',
+                    status: 'critical',
+                    icon: '🔍',
+                    detail: `現在の検索表示回数（3ヶ月${data.searchImpressions}回）は業界基準の50,000回を下回っています。`,
+                    actions: [
+                        'SEO対策：ロングテールキーワードを中心に記事を月4本以上作成',
+                        'MEO対策：Googleマイビジネスの投稿を週2回実施',
+                        'リスティング広告：月額5万円程度から開始'
+                    ]
+                });
+            }
+            
+            const hotLeadGap = data.idealHotLeads - data.hotLeads;
+            if (hotLeadGap > 0) {
+                improvements.push({
+                    category: 'ホットリード獲得強化',
+                    status: 'critical',
+                    icon: '🔥',
+                    detail: `最重要KPIであるホットリード（来場予約・個別相談）が月${hotLeadGap}件不足しています。`,
+                    actions: [
+                        '個別相談会の価値訴求強化',
+                        'オンライン相談の導入',
+                        '限定特典の設定'
+                    ]
+                });
+            }
+            
+            const cvGap = (data.idealCVRate - data.currentCVRate) * 100;
+            if (cvGap > 0) {
+                improvements.push({
+                    category: 'コンバージョン率改善',
+                    status: 'important',
+                    icon: '📈',
+                    detail: `現在のCV率${(data.currentCVRate * 100).toFixed(2)}%を${(data.idealCVRate * 100).toFixed(1)}%まで向上させる必要があります。`,
+                    actions: [
+                        'ランディングページの改善',
+                        'フォームの最適化',
+                        'A/Bテスト実施'
+                    ]
+                });
+            }
+            
+            let improvementHTML = '';
+            improvements.forEach(item => {
+                const statusClass = item.status === 'critical' ? 'critical' : 
+                                  item.status === 'important' ? 'important' : 'good';
+                const statusText = item.status === 'critical' ? '要改善' : 
+                                 item.status === 'important' ? '改善推奨' : '良好';
+                const statusColorClass = `status-${statusClass}`;
+                
+                improvementHTML += `
+                    <div class="improvement-card ${statusClass}">
+                        <div class="improvement-category">
+                            <span>${item.icon}</span>
+                            <span>${item.category}</span>
+                            <span class="improvement-status ${statusColorClass}">${statusText}</span>
+                        </div>
+                        <div class="improvement-detail">${item.detail}</div>
+                        <div class="improvement-action">
+                            <div class="improvement-action-title">推奨アクション</div>
+                            <ul class="improvement-action-list">
+                                ${item.actions.map(action => `<li>${action}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('improvementDisplay').innerHTML = improvementHTML;
+        }
+        
+        // 初期計算
+        updateTotalInquiries();
+        calculateFunnel();
+        
+        // 入力値変更時に自動計算（リード内訳以外）
+        document.querySelectorAll('input:not(#hotLeads):not(#warmLeads):not(#coldLeads)').forEach(input => {
+            input.addEventListener('input', calculateFunnel);
+        });
+    </script>
+</body>
+</html>
